@@ -13,9 +13,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Avkoda binärfiler
         run: |
+          set -euo pipefail
           mkdir -p _site
           cp -r app/. _site/
+          if compgen -G "_site/min-dag.apk.part*.b64" > /dev/null; then
+            cat $(ls _site/min-dag.apk.part*.b64 | sort) > _site/min-dag.apk.b64
+            rm -f _site/min-dag.apk.part*.b64
+          fi
           find _site -name '*.b64' | while read f; do base64 -d "$f" > "${f%.b64}"; rm "$f"; done
+          if [ -f _site/min-dag.apk ] && [ -f _site/min-dag.apk.sha256 ]; then
+            expected=$(awk '{print $1}' _site/min-dag.apk.sha256)
+            actual=$(sha256sum _site/min-dag.apk | awk '{print $1}')
+            if [ "$expected" != "$actual" ]; then
+              echo "APK checksum mismatch: expected $expected got $actual"
+              rm -f _site/min-dag.apk
+              echo "Leaving APK out of this publish (upload may be incomplete)."
+            else
+              echo "APK checksum OK ($actual)"
+            fi
+          fi
+          rm -f _site/min-dag.apk.sha256
           touch _site/.nojekyll
           ls -R _site
       - name: Publicera till gh-pages
@@ -26,3 +43,18 @@ jobs:
           git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
           git add -A && git commit -qm "Publicera ${GITHUB_SHA::7}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+      - name: Publicera APK som GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f _site/min-dag.apk ]; then
+            echo "Ingen giltig APK att släppa."
+            exit 0
+          fi
+          if gh release view v1.0 >/dev/null 2>&1; then
+            gh release upload v1.0 _site/min-dag.apk --clobber
+          else
+            gh release create v1.0 _site/min-dag.apk \
+              --title "Min dag Android" \
+              --notes "Installera Min dag på en Android-telefon. Öppna filen, tillåt installation från okända källor när telefonen frågar, och tryck Installera."
+          fi

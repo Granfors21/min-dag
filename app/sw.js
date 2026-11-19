@@ -34,6 +34,8 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   const inScope = url.pathname === BASE.slice(0, -1) || url.pathname.startsWith(BASE);
   if (!inScope) return;
+  // Låt webbläsaren ladda ner APK-filen, cacha den inte i PWA:n.
+  if (url.pathname.endsWith(".apk")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

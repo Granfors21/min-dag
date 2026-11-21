@@ -53,8 +53,10 @@ jobs:
           fi
           if gh release view v1.0 >/dev/null 2>&1; then
             gh release upload v1.0 _site/min-dag.apk --clobber
+            gh release edit v1.0 --title "Min dag 2.0 (Android)" \
+              --notes "Min dag 2.0: lugn stödapp för barnets telefon. Avinstallera den gamla Min dag först (se android/INSTALLERA.md). Öppna filen, tillåt installation från okända källor och tryck Installera."
           else
             gh release create v1.0 _site/min-dag.apk \
-              --title "Min dag Android" \
+              --title "Min dag 2.0 (Android)" \
               --notes "Installera Min dag på en Android-telefon. Öppna filen, tillåt installation från okända källor när telefonen frågar, och tryck Installera."
           fi

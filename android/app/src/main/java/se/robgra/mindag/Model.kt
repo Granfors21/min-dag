@@ -7,10 +7,11 @@ import java.util.Calendar
 enum class Kind { MORNING, EVENING }
 enum class DayType { SCHOOL, FREE }
 
-data class Step(val text: String, val icon: String, val minutes: Int = 0) {
-    fun toJson() = JSONObject().put("t", text).put("i", icon).put("m", minutes)
+/** image = filnamn på ett eget foto i appens lagring (null = visa emoji). */
+data class Step(val text: String, val icon: String, val minutes: Int = 0, val image: String? = null) {
+    fun toJson() = JSONObject().put("t", text).put("i", icon).put("m", minutes).apply { if (image != null) put("img", image) }
     companion object {
-        fun from(o: JSONObject) = Step(o.optString("t"), o.optString("i", "⭐"), o.optInt("m", 0))
+        fun from(o: JSONObject) = Step(o.optString("t"), o.optString("i", "⭐"), o.optInt("m", 0), o.optString("img", "").ifEmpty { null })
     }
 }
 
@@ -61,7 +62,21 @@ data class Settings(
     val nightFree: Night = Night(21, 30, 8, 0),
     val nightReminderOnUnlock: Boolean = true,
     val onboarded: Boolean = false,
+    /** SHA-256 av återställningskoden (aldrig koden i klartext). */
+    val recoveryHash: String = "",
+    /** setAlarmClock för rutinstart och läggdags: säkrast, men visar en liten larmikon. */
+    val strongAlarms: Boolean = true,
+    /** Låt Familjeappen (se.robgra.app) styra läggdags och vakna. */
+    val followFamily: Boolean = false,
+    /** Kvällens natt per veckodag (Calendar.DAY_OF_WEEK för kvällen) från Familjeappen. */
+    val familyNights: Map<Int, Night> = emptyMap(),
 ) {
+    /** Natten som börjar på kvällen den här dagen. */
+    fun nightForEvening(evening: Calendar): Night {
+        if (followFamily) familyNights[evening.get(Calendar.DAY_OF_WEEK)]?.let { return it }
+        val tomorrow = (evening.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+        return night(dayType(tomorrow))
+    }
     fun routine(kind: Kind, type: DayType) = routines.first { it.kind == kind && it.dayType == type }
     fun dayType(cal: Calendar) = if (cal.get(Calendar.DAY_OF_WEEK) in schoolDays) DayType.SCHOOL else DayType.FREE
     fun night(type: DayType) = if (type == DayType.SCHOOL) nightSchool else nightFree
@@ -70,7 +85,10 @@ data class Settings(
         .put("school", JSONArray().apply { schoolDays.sorted().forEach { put(it) } })
         .put("routines", JSONArray().apply { routines.forEach { put(it.toJson()) } })
         .put("nightOn", nightEnabled).put("nightS", nightSchool.toJson()).put("nightF", nightFree.toJson())
-        .put("nightUnlock", nightReminderOnUnlock).put("onb", onboarded).toString()
+        .put("nightUnlock", nightReminderOnUnlock).put("onb", onboarded)
+        .put("rec", recoveryHash).put("strong", strongAlarms).put("follow", followFamily)
+        .put("famN", JSONObject().apply { familyNights.forEach { (d, n) -> put(d.toString(), n.toJson()) } })
+        .toString()
 
     companion object {
         fun from(s: String?): Settings {
@@ -94,6 +112,12 @@ data class Settings(
                     nightFree = Night.from(o.optJSONObject("nightF"), d.nightFree),
                     nightReminderOnUnlock = o.optBoolean("nightUnlock", true),
                     onboarded = o.optBoolean("onb", false),
+                    recoveryHash = o.optString("rec", ""),
+                    strongAlarms = o.optBoolean("strong", true),
+                    followFamily = o.optBoolean("follow", false),
+                    familyNights = o.optJSONObject("famN")?.let { fo ->
+                        fo.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { d -> d to Night.from(fo.optJSONObject(k), Night(20, 0, 7, 0)) } }.toMap()
+                    } ?: emptyMap(),
                 )
             } catch (e: Exception) { Settings() }
         }

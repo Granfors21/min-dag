@@ -16,6 +16,19 @@ class Store(ctx: Context) {
     var timerDone: TimerState?
         get() = TimerState.from(p.getString("timerDone", null))
         set(v) { p.edit().putString("timerDone", v?.toJson()).apply() }
+    /** Status för "Nästa påminnelse" i inställningarna. */
+    var nextAt: Long
+        get() = p.getLong("nextAt", 0)
+        set(v) { p.edit().putLong("nextAt", v).apply() }
+    var nextWhat: String
+        get() = p.getString("nextWhat", "") ?: ""
+        set(v) { p.edit().putString("nextWhat", v).apply() }
+    var lastFired: Long
+        get() = p.getLong("lastFired", 0)
+        set(v) { p.edit().putLong("lastFired", v).apply() }
+    var lastSafety: Long
+        get() = p.getLong("lastSafety", 0)
+        set(v) { p.edit().putLong("lastSafety", v).apply() }
     var customActivity: String
         get() = p.getString("customAct", "") ?: ""
         set(v) { p.edit().putString("customAct", v).apply() }

@@ -1,0 +1,1 @@
+-keep class se.robgra.mindag.** { *; }

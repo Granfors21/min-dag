@@ -1,0 +1,16 @@
+{
+  "id": "/min-dag/",
+  "name": "Min dag",
+  "short_name": "Min dag",
+  "description": "Ladda ner Min dag för Android.",
+  "lang": "sv",
+  "start_url": "/min-dag/",
+  "scope": "/min-dag/",
+  "display": "browser",
+  "background_color": "#f6f3ee",
+  "theme_color": "#5e8f7d",
+  "icons": [
+    { "src": "/min-dag/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/min-dag/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

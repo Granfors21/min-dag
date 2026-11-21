@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Min dag – ladda ner Android-appen</title>
+<meta name="theme-color" content="#5e8f7d">
+<link rel="icon" href="/min-dag/favicon.svg">
+<link rel="apple-touch-icon" href="/min-dag/icons/icon-180.png">
+<link rel="manifest" href="/min-dag/manifest.webmanifest">
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #f6f3ee; color: #3d4a52; }
+  main { max-width: 34rem; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; text-align: center; }
+  h1 { font-size: 2rem; margin: .5rem 0 .75rem; }
+  p { font-size: 1.15rem; line-height: 1.5; }
+  .btn { display: block; margin: 1.5rem auto .75rem; padding: 1.1rem 1.25rem; border-radius: 1.25rem; background: #5e8f7d; color: #fff;
+         font-size: 1.35rem; font-weight: 600; text-decoration: none; }
+  .soft { color: #7c8a92; font-size: 1rem; }
+  .box { background: #fff; border-radius: 1.25rem; padding: 1rem 1.25rem; text-align: left; margin-top: 1.5rem; }
+  .box li { margin: .4rem 0; font-size: 1.05rem; }
+  a { color: #5e8f7d; }
+</style>
+</head>
+<body>
+<main>
+  <svg width="96" height="96" viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="40" fill="#dce8e3"/><circle cx="54" cy="54" r="28" fill="#fff"/><path d="M54 54V32a22 22 0 0 1 21.9 24.2z" fill="#8fb8a8"/><rect x="52.5" y="34" width="3" height="21" fill="#4a5a63"/><circle cx="54" cy="54" r="3" fill="#4a5a63"/></svg>
+  <h1>Min dag finns nu som Android-app</h1>
+  <p>Webbversionen är nedlagd. Den nya appen är en lugn stödapp för barnets telefon: morgon och kväll steg för steg, tårtbitsklocka, "Starta tid", lugn-läge och nattläge. Allt sparas bara i telefonen.</p>
+  <a class="btn" href="https://github.com/Granfors21/min-dag/releases/latest/download/min-dag.apk">Ladda ner Min dag (Android)</a>
+  <p class="soft">Reservlänk: <a href="/min-dag/min-dag.apk">min-dag.apk</a></p>
+  <div class="box">
+    <strong>Så här installerar du</strong>
+    <ol>
+      <li>Öppna länken på barnets Android-telefon.</li>
+      <li>Tillåt installation från okända källor om telefonen frågar och tryck <b>Installera</b>.</li>
+      <li>Hade du version 1 eller den gamla appen med låsning: avinstallera den först. Se <a href="https://github.com/Granfors21/min-dag/blob/main/android/INSTALLERA.md">installationsguiden</a>.</li>
+      <li>Har du lagt webbappen på hemskärmen kan du ta bort den genvägen.</li>
+    </ol>
+  </div>
+</main>
+<script>
+  // Ta bort den gamla webbappens service worker och cache så att version 1 försvinner.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+  }
+  if (window.caches) { caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }); }
+</script>
+</body>
+</html>

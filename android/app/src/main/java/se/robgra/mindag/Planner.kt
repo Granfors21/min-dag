@@ -41,15 +41,13 @@ object Planner {
         if (!s.nightEnabled) return null
         val today = cal(now)
         val tomorrow = plusDays(today, 1)
-        val tn = s.night(s.dayType(tomorrow))
+        val tn = s.nightForEvening(today)
         val bedTonight = at(today, tn.bedH, tn.bedM)
         if (now >= bedTonight) return NightInfo(at(tomorrow, tn.wakeH, tn.wakeM), bedTonight)
-        val n = s.night(s.dayType(today))
+        val yesterday = plusDays(today, -1)
+        val n = s.nightForEvening(yesterday)
         val wakeToday = at(today, n.wakeH, n.wakeM)
-        if (now < wakeToday) {
-            val yesterday = plusDays(today, -1)
-            return NightInfo(wakeToday, at(yesterday, n.bedH, n.bedM))
-        }
+        if (now < wakeToday) return NightInfo(wakeToday, at(yesterday, n.bedH, n.bedM))
         return null
     }
 
@@ -97,7 +95,7 @@ object Planner {
                 out += Event(st, EventType.ROUTINE_START, r.id)
             }
             if (s.nightEnabled) {
-                val tn = s.night(s.dayType(plusDays(day, 1)))
+                val tn = s.nightForEvening(day)
                 val bed = at(day, tn.bedH, tn.bedM)
                 out += Event(bed - BED_SOON_MIN * 60_000L, EventType.BED_SOON)
                 out += Event(bed, EventType.NIGHT_START)

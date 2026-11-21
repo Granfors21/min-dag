@@ -89,7 +89,6 @@ object Notify {
             .setContentTitle("🌙 Nu är det natt")
             .setContentText("Dags att sova. Du kan vakna $wakeText.")
             .setContentIntent(openApp(ctx, ID_NIGHT))
-            .setFullScreenIntent(openApp(ctx, ID_NIGHT + 100), true)
             .setAutoCancel(true)
             .setTimeoutAfter(60_000)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -101,6 +100,4 @@ object Notify {
 
     fun cancel(ctx: Context, id: Int) = NotificationManagerCompat.from(ctx).cancel(id)
 
-    fun fullScreenAllowed(ctx: Context): Boolean =
-        if (Build.VERSION.SDK_INT >= 34) ctx.getSystemService(NotificationManager::class.java).canUseFullScreenIntent() else true
 }

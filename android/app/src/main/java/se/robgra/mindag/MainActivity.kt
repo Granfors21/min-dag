@@ -17,7 +17,9 @@ class MainActivity : ComponentActivity() {
                     Route.CHILD, Route.WELCOME -> moveTaskToBack(true)
                     Route.ROUTINE_EDIT -> state.route = Route.PARENT
                     Route.CHECKS -> state.route = if (state.settings.onboarded) Route.PARENT else Route.CHECKS
-                    Route.PIN_SETUP -> state.route = if (state.settings.pin.isEmpty()) Route.WELCOME else Route.PARENT
+                    Route.PIN_SETUP -> state.route = if (state.settings.pin.isEmpty()) Route.WELCOME else if (state.recovering) Route.PIN_SETUP else Route.PARENT
+                    Route.RECOVERY_SHOW -> {}
+                    Route.RECOVERY_ENTER -> state.route = Route.PIN
                     else -> state.route = Route.CHILD
                 }
             }

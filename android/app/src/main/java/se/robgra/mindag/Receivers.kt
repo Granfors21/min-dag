@@ -10,6 +10,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val now = System.currentTimeMillis()
         when (intent.action) {
             Alarms.ACTION_EVENT -> {
+                store.lastFired = now
                 val firedFor = intent.getLongExtra("at", now)
                 val s = store.settings
                 // Hantera alla händelser från den planerade tiden fram till nu (om flera sammanfaller eller larmet blev sent).

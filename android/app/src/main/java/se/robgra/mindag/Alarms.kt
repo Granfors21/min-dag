@@ -29,9 +29,11 @@ object Alarms {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-    private fun set(ctx: Context, at: Long, p: PendingIntent) {
+    private fun set(ctx: Context, at: Long, p: PendingIntent, strong: Boolean = false) {
         val am = ctx.getSystemService(AlarmManager::class.java)
         try {
+            // setAlarmClock är det Android prioriterar högst (går igenom Doze och de flesta batterispärrar).
+            if (strong) { am.setAlarmClock(AlarmManager.AlarmClockInfo(at, Notify.openApp(ctx, 7)), p); return }
             if (exactAllowed(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, p)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, p)
         } catch (e: SecurityException) {
@@ -41,11 +43,15 @@ object Alarms {
 
     /** Planerar nästa rutin-/nattpåminnelse. Kedjan fortsätter i AlarmReceiver. */
     fun scheduleNext(ctx: Context, now: Long = System.currentTimeMillis()) {
-        val s = Store(ctx).settings
+        val store = Store(ctx)
+        val s = store.settings
         val next = Planner.nextEvents(s, now + 5_000).firstOrNull()
         val am = ctx.getSystemService(AlarmManager::class.java)
-        if (next == null) { am.cancel(pi(ctx, ACTION_EVENT, RC_EVENT)); return }
-        set(ctx, next.at, pi(ctx, ACTION_EVENT, RC_EVENT, next.at))
+        if (next == null) { am.cancel(pi(ctx, ACTION_EVENT, RC_EVENT)); store.nextAt = 0; store.nextWhat = ""; return }
+        val strong = s.strongAlarms && next.type in setOf(EventType.ROUTINE_START, EventType.NIGHT_START)
+        set(ctx, next.at, pi(ctx, ACTION_EVENT, RC_EVENT, next.at), strong)
+        store.nextAt = next.at
+        store.nextWhat = describe(s, next)
     }
 
     fun scheduleTimer(ctx: Context, t: TimerState?) {
@@ -58,6 +64,17 @@ object Alarms {
         set(ctx, t.endsAt, pi(ctx, ACTION_TIMER_END, RC_TIMER_END, t.endsAt))
     }
 
+    fun describe(s: Settings, e: Event): String {
+        val r = s.routines.firstOrNull { it.id == e.routineId }
+        return when (e.type) {
+            EventType.ROUTINE_SOON -> "Förvarning: ${r?.title?.lowercase() ?: "rutin"}"
+            EventType.ROUTINE_START -> "${r?.title ?: "Rutin"} börjar"
+            EventType.BED_SOON -> "Snart läggdags"
+            EventType.NIGHT_START -> "Läggdags"
+            EventType.NIGHT_END -> "Natten slutar"
+        }
+    }
+
     /** Allt som ska vara igång efter omstart, uppdatering eller ändrade inställningar. */
     fun syncAll(ctx: Context) {
         scheduleNext(ctx)
@@ -65,5 +82,6 @@ object Alarms {
         val t = st.timer
         if (t != null && t.endsAt > System.currentTimeMillis()) scheduleTimer(ctx, t) else scheduleTimer(ctx, null)
         NightService.sync(ctx)
+        SafetyWorker.ensure(ctx)
     }
 }

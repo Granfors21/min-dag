@@ -12,8 +12,8 @@ android {
         applicationId = "se.robgra.mindag"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "2.1.0"
     }
 
     signingConfigs {
@@ -44,7 +44,14 @@ android {
         jvmTarget = "17"
         freeCompilerArgs += listOf("-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi")
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
+    flavorDimensions += "kanal"
+    productFlavors {
+        // Sidladdad APK (GitHub/Drive): får be om batteriundantag direkt.
+        create("sideload") { dimension = "kanal" }
+        // Google Play: utan REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (öppnar systemets lista i stället).
+        create("play") { dimension = "kanal" }
+    }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
     testOptions {
         unitTests.isReturnDefaultValues = true
@@ -62,10 +69,13 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.work:work-testing:2.9.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -85,4 +85,31 @@ class PlannerTest {
         assertTrue(breath(0).second); assertTrue(breath(3_999).second); assertFalse(breath(4_000).second)
         assertEquals(1.0f, breath(4_000).first, 0.01f); assertEquals(0.55f, breath(9_999).first, 0.01f)
     }
+
+    @Test fun familyNightsOverrideWhenFollowing() {
+        val fam = mapOf(Calendar.MONDAY to Night(19, 45, 6, 30))
+        val f = s.copy(followFamily = true, familyNights = fam)
+        assertNotNull(Planner.night(f, t(2026, 11, 23, 19, 50)))       // måndag kväll 19:50 = natt
+        assertEquals(t(2026, 11, 24, 6, 30), Planner.night(f, t(2026, 11, 23, 19, 50))!!.wakeAt)
+        assertNull(Planner.night(s.copy(familyNights = fam), t(2026, 11, 23, 19, 50))) // inte om kopplingen är av
+        // Tisdag saknas i familjens tider -> egna tider gäller
+        assertNull(Planner.night(f, t(2026, 11, 24, 20, 0)))
+        assertTrue(Planner.events(f, t(2026, 11, 23, 12, 0)).any { it.type == EventType.NIGHT_START && it.at == t(2026, 11, 23, 19, 45) })
+    }
+
+    @Test fun recoveryCode() {
+        val c = Recovery.newCode()
+        assertTrue(Regex("[A-Z2-9]{4}-[A-Z2-9]{4}").matches(c))
+        val h = Recovery.hash(c)
+        assertTrue(Recovery.matches(c.lowercase().replace("-", " "), h))
+        assertFalse(Recovery.matches("AAAA-AAAA", h))
+        assertFalse(Recovery.matches(c, ""))
+        assertFalse(h.contains(Recovery.normalize(c)))
+    }
+
+    @Test fun settingsRoundTripNew() {
+        val s2 = s.copy(recoveryHash = "ab", strongAlarms = false, followFamily = true, familyNights = mapOf(2 to Night(20, 0, 7, 0)),
+            routines = s.routines.map { r -> r.copy(steps = r.steps.map { it.copy(image = "x.jpg") }) })
+        assertEquals(s2, Settings.from(s2.toJson()))
+    }
 }

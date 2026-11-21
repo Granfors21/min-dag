@@ -1,23 +1,18 @@
 # Min dag
 
-En lugn dagsapp (PWA) som hjälper ett barn att ta sig igenom morgon och kväll i tydliga steg. All data sparas bara i telefonen — inget skickas till någon server.
+En lugn stödapp för barnets telefon. Den hjälper ett barn genom morgon och kväll i tydliga steg och har en tårtbitsklocka, "Starta tid", ett lugn-läge och ett nattläge. Allt sparas bara i telefonen. Den har ingen belöning, ingen skärmtid och ingen låsning.
 
-## Ladda ner Android-appen
+## Ladda ner Android-appen (version 2.0)
 
 Direktlänk (öppna på en Android-telefon): https://github.com/Granfors21/min-dag/releases/latest/download/min-dag.apk
 
 Reservlänk: https://granfors21.github.io/min-dag/min-dag.apk
 
-Tillåt installation från okända källor när telefonen frågar, och tryck sedan **Installera**.
+**Avinstallera den gamla Min dag först.** Version 2.0 har ett nytt paketnamn och installeras inte som en uppdatering. Steg för steg finns i [android/INSTALLERA.md](android/INSTALLERA.md).
 
-## Öppna webbappen
+## Källkod
 
-Adress: https://granfors21.github.io/min-dag/
+- Android-appen: [`android/`](android/)
+- Den äldre webbappen (PWA) under `app/` är version 1 och finns kvar på https://granfors21.github.io/min-dag/.
 
-På Android: öppna länken i Chrome, tryck på menyn och välj **Lägg till på startskärmen**. Därefter fungerar appen som en vanlig app, även utan internet.
-
-Nattlås och skärmtidsgränser i webbappen sätts med [Google Family Link](https://families.google/familylink/). I Android-appen (APK) hanteras lås i appen.
-
-## Bygga om
-
-Källkoden publiceras som en färdig webbapp under `app/`. Binära filer (ikoner, typsnitt och APK) ligger som `.b64` och avkodas automatiskt när GitHub Pages byggs.
+Binära filer (ikoner, typsnitt och APK) ligger som `.b64` och avkodas automatiskt när GitHub Pages byggs.

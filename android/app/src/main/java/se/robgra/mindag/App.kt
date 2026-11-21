@@ -10,9 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 
-enum class Route { CHILD, CALM, TIMER_SETUP, PIN, PIN_SETUP, PARENT, ROUTINE_EDIT, WELCOME, CHECKS }
+enum class Route { CHILD, CALM, TIMER_SETUP, PIN, PIN_SETUP, PARENT, ROUTINE_EDIT, WELCOME, CHECKS, RECOVERY_SHOW, RECOVERY_ENTER }
 
-class AppState(private val ctx: Context, val clock: () -> Long, private val sideEffects: Boolean = true) {
+class AppState(val ctx: Context, val clock: () -> Long, private val sideEffects: Boolean = true) {
     val store = Store(ctx)
     var settings by mutableStateOf(store.settings)
     var progress by mutableStateOf(store.progress)
@@ -22,6 +22,16 @@ class AppState(private val ctx: Context, val clock: () -> Long, private val side
     var route by mutableStateOf(if (settings.pin.isEmpty()) Route.WELCOME else Route.CHILD)
     var editing by mutableStateOf<String?>(null)
     var pinTarget by mutableStateOf(Route.PARENT)
+    /** Nyss skapad återställningskod som visas en gång. */
+    var shownCode by mutableStateOf<String?>(null)
+    var afterCode by mutableStateOf(Route.PARENT)
+    var recovering by mutableStateOf(false)
+
+    fun newRecoveryCode(next: Route) {
+        val c = Recovery.newCode()
+        updateSettings { it.copy(recoveryHash = Recovery.hash(c)) }
+        shownCode = c; afterCode = next; route = Route.RECOVERY_SHOW
+    }
 
     fun reload() {
         settings = store.settings; progress = store.progress; timer = store.timer; timerDone = store.timerDone
@@ -33,6 +43,7 @@ class AppState(private val ctx: Context, val clock: () -> Long, private val side
 
     fun updateSettings(f: (Settings) -> Settings) {
         settings = f(settings); store.settings = settings
+        Photos.cleanup(ctx, settings)
         if (sideEffects) Alarms.syncAll(ctx)
     }
 
@@ -98,6 +109,8 @@ fun MinDagApp(state: AppState, ticking: Boolean = true, animate: Boolean = true)
             Route.CALM -> CalmScreen(state, animate)
             Route.TIMER_SETUP -> TimerSetupScreen(state)
             Route.CHILD -> ChildScreen(state)
+            Route.RECOVERY_SHOW -> RecoveryShowScreen(state)
+            Route.RECOVERY_ENTER -> RecoveryEnterScreen(state)
         }
     }
 }

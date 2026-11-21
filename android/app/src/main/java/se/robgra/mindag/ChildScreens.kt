@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +47,18 @@ fun minutesLeftText(ms: Long): String {
         m <= 1 -> "1 minut kvar"
         m < 60 -> "$m minuter kvar"
         else -> { val h = m / 60; val r = m % 60; if (r == 0) "$h tim kvar" else "$h tim $r min kvar" }
+    }
+}
+
+/** Visar stegets egna foto (rund ram) eller emoji. */
+@Composable
+fun StepPicture(step: Step, size: Dp, emojiSize: androidx.compose.ui.unit.TextUnit, bg: Color = C.sageLight) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val bmp = remember(step.image) { step.image?.let { Photos.load(ctx, it) }?.asImageBitmap() }
+    Box(Modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+        if (bmp != null) androidx.compose.foundation.Image(bmp, step.text, Modifier.fillMaxSize(),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Text(step.icon, fontSize = emojiSize)
     }
 }
 
@@ -154,14 +167,12 @@ fun StepScreen(state: AppState, r: Routine, p: Progress) {
             Text(if (left > 0) minutesLeftText(left) else "Tiden är slut. Gör klart i lugn takt.", fontSize = 20.sp, color = C.soft)
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(step.icon, fontSize = 56.sp)
+                StepPicture(step, 76.dp, 50.sp, bg = Color.Transparent)
                 Spacer(Modifier.width(12.dp))
                 Text(step.text, fontSize = 32.sp, fontWeight = FontWeight.SemiBold, color = C.text, lineHeight = 38.sp)
             }
         } else {
-            Box(Modifier.size(210.dp).clip(CircleShape).background(C.sageLight), contentAlignment = Alignment.Center) {
-                Text(step.icon, fontSize = 110.sp)
-            }
+            StepPicture(step, 230.dp, 110.sp)
             Spacer(Modifier.height(20.dp))
             Text(step.text, fontSize = 36.sp, fontWeight = FontWeight.SemiBold, color = C.text, textAlign = TextAlign.Center, lineHeight = 42.sp)
         }

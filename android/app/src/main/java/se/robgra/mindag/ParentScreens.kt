@@ -93,7 +93,7 @@ fun TimeStepper(label: String, h: Int, m: Int, minH: Int = 0, maxH: Int = 23, on
 // ---------- PIN ----------
 
 @Composable
-fun PinPad(title: String, sub: String?, error: String?, onDone: (String) -> Unit, onCancel: (() -> Unit)?) {
+fun PinPad(title: String, sub: String?, error: String?, onDone: (String) -> Unit, onCancel: (() -> Unit)?, footer: (@Composable () -> Unit)? = null) {
     var pin by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().background(C.bg).systemBarsPadding().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth()) { if (onCancel != null) TextButton(onClick = onCancel) { Text("← Tillbaka", fontSize = 18.sp, color = C.soft) } }
@@ -119,6 +119,7 @@ fun PinPad(title: String, sub: String?, error: String?, onDone: (String) -> Unit
                 }
             }
         }
+        footer?.invoke()
         Spacer(Modifier.weight(1f))
     }
 }
@@ -151,10 +152,14 @@ fun PinSetupScreen(state: AppState) {
                 if (p in setOf("0000", "1111", "1234", "4321")) err = "Välj en svårare kod" else { first = p; err = null }
             } else if (first == p) {
                 state.updateSettings { it.copy(pin = p) }
-                state.route = if (state.settings.onboarded) Route.PARENT else Route.CHECKS
+                when {
+                    !state.settings.onboarded -> state.newRecoveryCode(Route.CHECKS)
+                    state.recovering -> { state.recovering = false; state.newRecoveryCode(Route.PARENT) }
+                    else -> state.route = Route.PARENT
+                }
             } else { first = null; err = "Koderna var olika. Försök igen." }
         },
-        onCancel = { state.route = if (changing) Route.PARENT else Route.WELCOME },
+        onCancel = if (state.recovering) null else ({ state.route = if (changing) Route.PARENT else Route.WELCOME }),
     )
 }
 
@@ -172,7 +177,9 @@ fun PinEntryScreen(state: AppState) {
             wrongCount++
             if (wrongCount >= 5) { lockedUntil = now + 60_000; wrongCount = 0; err = "Fel kod. Vänta en minut." } else err = "Fel kod"
         }
-    }, onCancel = { state.route = Route.CHILD })
+    }, onCancel = { state.route = Route.CHILD }, footer = {
+        TextButton(onClick = { state.route = Route.RECOVERY_ENTER }) { Text("Glömt PIN-koden?", fontSize = 17.sp, color = C.soft) }
+    })
 }
 
 // ---------- Inställningar ----------
@@ -215,7 +222,9 @@ fun ParentScreen(state: AppState) {
             }
         }
         Section("Nattläge") {
-            ToggleRow("Nattläge på", s.nightEnabled, "Visar en lugn nattskärm mellan läggdags och vakna") { v -> state.updateSettings { it.copy(nightEnabled = v) } }
+            ToggleRow("Nattläge på", s.nightEnabled, "Visar en lugn nattskärm mellan läggdags och vakna. Telefonen låses inte.") { v -> state.updateSettings { it.copy(nightEnabled = v) } }
+            if (s.nightEnabled && s.followFamily && s.familyNights.isNotEmpty())
+                Text("Tiderna styrs nu av Familjeappen (se nedan). Tiderna här gäller om kopplingen stängs av.", fontSize = 14.sp, color = C.sageDark)
             if (s.nightEnabled) {
                 Text("Natt före skoldag", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = C.text, modifier = Modifier.padding(top = 8.dp))
                 NightRows(s.nightSchool) { n -> state.updateSettings { it.copy(nightSchool = n) } }
@@ -230,16 +239,25 @@ fun ParentScreen(state: AppState) {
             ToggleRow("Vibration", s.vibration) { v -> state.updateSettings { it.copy(vibration = v) } }
             OutlinedButton(onClick = { Notify.show(ctx, Notify.ID_ROUTINE, "🦷 Test", "Så här låter och ser en påminnelse ut.") }) { Text("Testa en påminnelse", fontSize = 16.sp) }
         }
+        ReminderStatusSection(state)
+        FamilySection(state)
         Section("Telefonen") {
             Text("Kontrollera att påminnelserna kommer fram, även när telefonen sparar batteri.", fontSize = 15.sp, color = C.soft)
             Spacer(Modifier.height(6.dp))
             OutlinedButton(onClick = { state.route = Route.CHECKS }) { Text("Kontrollera behörigheter", fontSize = 16.sp) }
         }
         Section("PIN-kod") {
+            if (s.recoveryHash.isEmpty()) {
+                Text("⚠️ Ingen återställningskod finns. Skapa en, annars kan en glömd PIN bara lösas genom att rensa appens data.", fontSize = 15.sp, color = C.wedge)
+                Spacer(Modifier.height(6.dp))
+            }
             OutlinedButton(onClick = { state.route = Route.PIN_SETUP }) { Text("Byt PIN-kod", fontSize = 16.sp) }
+            OutlinedButton(onClick = { state.newRecoveryCode(Route.PARENT) }) {
+                Text(if (s.recoveryHash.isEmpty()) "Skapa återställningskod" else "Skapa ny återställningskod (den gamla slutar gälla)", fontSize = 16.sp)
+            }
         }
         Spacer(Modifier.height(12.dp))
-        Text("Min dag 2.0 · sparar allt lokalt, inget konto, ingen internet.", fontSize = 13.sp, color = C.soft)
+        Text("Min dag ${BuildConfig.VERSION_NAME} · sparar allt lokalt, inget konto, ingen internet.", fontSize = 13.sp, color = C.soft)
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -261,7 +279,23 @@ fun RoutineEditScreen(state: AppState) {
     val id = state.editing ?: run { state.route = Route.PARENT; return }
     val r = state.settings.routines.first { it.id == id }
     var iconFor by remember { mutableStateOf<Int?>(null) }
+    var photoFor by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(-1) }
+    val ctx = LocalContext.current
     fun save(nr: Routine) = state.updateSettings { s -> s.copy(routines = s.routines.map { if (it.id == id) nr else it }) }
+    fun setImage(i: Int, name: String?) {
+        val cur = state.settings.routines.first { it.id == id }
+        if (i !in cur.steps.indices) return
+        save(cur.copy(steps = cur.steps.toMutableList().also { it[i] = it[i].copy(image = name) }))
+    }
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null && photoFor >= 0) Photos.importUri(ctx, uri)?.let { setImage(photoFor, it) }
+        photoFor = -1; iconFor = null
+    }
+    val shoot = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok && photoFor >= 0) Photos.importUri(ctx, Uri.fromFile(Photos.cameraTemp(ctx)))?.let { setImage(photoFor, it) }
+        Photos.cameraTemp(ctx).delete()
+        photoFor = -1; iconFor = null
+    }
     ParentFrame("${r.title} · ${typeName(r.dayType).lowercase()}", onBack = { state.route = Route.PARENT }) {
         Section("Start") {
             ToggleRow("Rutinen är på", r.enabled) { save(r.copy(enabled = it)) }
@@ -275,17 +309,33 @@ fun RoutineEditScreen(state: AppState) {
             r.steps.forEachIndexed { i, st ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(14.dp)).background(C.bg).padding(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(if (iconFor == i) C.sageLight else C.card).clickable { iconFor = if (iconFor == i) null else i }, contentAlignment = Alignment.Center) { Text(st.icon, fontSize = 30.sp) }
+                        Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(if (iconFor == i) C.sageLight else C.card).clickable { iconFor = if (iconFor == i) null else i }, contentAlignment = Alignment.Center) {
+                            StepPicture(st, 46.dp, 28.sp, bg = androidx.compose.ui.graphics.Color.Transparent)
+                        }
                         Spacer(Modifier.width(8.dp))
                         OutlinedTextField(st.text, { t -> save(r.copy(steps = r.steps.toMutableList().also { it[i] = st.copy(text = t.take(40)) })) },
                             singleLine = true, modifier = Modifier.weight(1f), textStyle = LocalTextStyle.current.copy(fontSize = 18.sp))
                     }
                     if (iconFor == i) {
-                        Text("Välj bild:", fontSize = 15.sp, color = C.soft, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                        FlowRow(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                photoFor = i
+                                pick.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }) { Text("🖼 Eget foto", fontSize = 15.sp) }
+                            OutlinedButton(onClick = {
+                                photoFor = i
+                                runCatching {
+                                    val f = Photos.cameraTemp(ctx)
+                                    shoot.launch(androidx.core.content.FileProvider.getUriForFile(ctx, "se.robgra.mindag.files", f))
+                                }
+                            }) { Text("📷 Kamera", fontSize = 15.sp) }
+                            if (st.image != null) TextButton(onClick = { setImage(i, null); iconFor = null }) { Text("Ta bort foto", fontSize = 15.sp, color = C.soft) }
+                        }
+                        Text("Eller välj en bild:", fontSize = 15.sp, color = C.soft, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Defaults.icons.forEach { ic ->
                                 Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(if (ic == st.icon) C.sageLight else C.card).clickable {
-                                    save(r.copy(steps = r.steps.toMutableList().also { it[i] = st.copy(icon = ic) })); iconFor = null
+                                    save(r.copy(steps = r.steps.toMutableList().also { it[i] = st.copy(icon = ic, image = null) })); iconFor = null
                                 }, contentAlignment = Alignment.Center) { Text(ic, fontSize = 24.sp) }
                             }
                         }
@@ -327,7 +377,6 @@ fun ChecksScreen(state: AppState, firstRun: Boolean) {
     val notif = Notify.canPost(ctx)
     val exact = Alarms.exactAllowed(ctx)
     val battery = Alarms.batteryUnrestricted(ctx)
-    val fsi = Notify.fullScreenAllowed(ctx)
     fun open(i: Intent) { try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {
         ctx.startActivity(Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     ParentFrame("Telefonens inställningar", onBack = if (firstRun) null else ({ state.route = Route.PARENT })) {
@@ -337,16 +386,12 @@ fun ChecksScreen(state: AppState, firstRun: Boolean) {
             else open(Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(AndroidSettings.EXTRA_APP_PACKAGE, ctx.packageName))
         }
         CheckRow("Batteri: obegränsad", "Annars kan telefonen stoppa påminnelser för att spara batteri", battery) {
-            open(Intent(AndroidSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
+            open(batteryIntent(ctx))
         }
         CheckRow("Exakta larm", "Påminnelsen kommer på minuten", exact) {
             if (Build.VERSION.SDK_INT >= 31) open(Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}")))
         }
-        CheckRow("Nattpåminnelse i helskärm", "Visar nattskärmen direkt när telefonen låses upp på natten", fsi) {
-            if (Build.VERSION.SDK_INT >= 34) open(Intent(AndroidSettings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${ctx.packageName}")))
-        }
-        Spacer(Modifier.height(12.dp))
-        Text("Samsung, Xiaomi, Huawei m.fl.: lägg även till Min dag under \"Appar som aldrig ska sova\" eller \"Autostart\" i telefonens batteriinställningar.", fontSize = 14.sp, color = C.soft)
+        OemCard()
         Spacer(Modifier.height(20.dp))
         if (firstRun) BigButton("Klart, visa barnets vy") { state.updateSettings { it.copy(onboarded = true) }; state.route = Route.CHILD }
         Spacer(Modifier.height(20.dp))

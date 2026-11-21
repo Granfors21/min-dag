@@ -1,36 +1,43 @@
-# Installera Min dag 2.0
+# Installera Min dag
 
-Min dag 2.0 är en lugn stödapp som bara ligger på barnets telefon. Den visar morgon- och kvällsrutinen ett steg i taget, har en tårtbitsklocka, en "Starta tid"-timer, ett lugn-läge och ett nattläge. Den har ingen belöning, ingen skärmtid och låser ingenting.
+Min dag är en lugn stödapp som bara ligger på barnets telefon. Den visar morgon- och kvällsrutinen ett steg i taget och har en tårtbitsklocka, "Starta tid", ett lugn-läge och ett nattläge. Den har ingen belöning och ingen skärmtid, och den låser ingenting, inte heller på natten.
 
-## 1. Avinstallera den gamla Min dag först
+Ladda ner på barnets telefon: https://github.com/Granfors21/min-dag/releases/latest/download/min-dag.apk
 
-Den nya versionen har ett nytt paketnamn (`se.robgra.mindag`) och en ny signeringsnyckel. Den installeras därför inte som en uppdatering.
+## Har du redan 2.0?
 
-1. Om den gamla appen är **enhetsadministratör**: öppna **Inställningar → Säkerhet → Enhetsadministratörsappar** (heter olika på olika telefoner) och stäng av Min dag.
-2. Stäng av den gamla appens **tillgänglighetstjänst** under **Inställningar → Tillgänglighet**.
-3. Avinstallera den gamla **Min dag**: håll fingret på ikonen och välj **Avinstallera**.
+Öppna länken och tryck **Installera**. 2.1 installeras som en uppdatering, och alla rutiner, foton och PIN-koden finns kvar.
 
-Annars får du två appar som båda heter Min dag, och den gamla fortsätter låsa telefonen.
+Efter uppdateringen: gå in i inställningarna (⚙ och PIN) och tryck **Skapa återställningskod** under PIN-kod. Skriv ner koden.
 
-## 2. Installera den nya
+## Har du den gamla Min dag (1.x, med låsning och belöning)?
 
-1. Öppna länken på barnets telefon: https://github.com/Granfors21/min-dag/releases/latest/download/min-dag.apk
-2. Tryck på filen när den laddats ner. Tillåt installation från okända källor om telefonen frågar.
-3. Tryck **Installera**.
+Den har ett annat paketnamn och en annan signeringsnyckel. Den måste tas bort först:
 
-## 3. Första start (en vuxen gör detta)
+1. Stäng av den gamla appen som **enhetsadministratör**: Inställningar → Säkerhet → Enhetsadministratörsappar.
+2. Stäng av dess **tillgänglighetstjänst** under Inställningar → Tillgänglighet.
+3. **Avinstallera** den gamla Min dag.
+4. Installera den nya från länken ovan.
 
-1. Välj en **PIN-kod** med 4 siffror. Den skyddar inställningarna.
-2. Tryck **Tillåt** på allt i listan:
-   - **Aviseringar**: mjuka påminnelser.
-   - **Batteri: obegränsad**: annars kan telefonen stoppa påminnelserna.
-   - **Exakta larm**: påminnelsen kommer på minuten.
-   - **Nattpåminnelse i helskärm**: nattskärmen visas direkt.
-3. Samsung, Xiaomi, Huawei, OnePlus med flera har egna batterispärrar. Lägg till Min dag under "Appar som aldrig ska sova", "Autostart" eller liknande.
-4. Öppna inställningarna med kugghjulet ⚙ uppe till höger. Där ställer du in tider, steg, bilder, skoldagar, nattläge och ljud.
+## Första start (en vuxen gör detta)
+
+1. Välj en **PIN-kod** med 4 siffror.
+2. Du får en **återställningskod** (t.ex. `K7QM-4XPA`). Fota den med din egen telefon eller skriv ner den. Glömmer du PIN-koden skriver du in koden under **Glömt PIN-koden?**. Då väljer du en ny PIN och allt annat finns kvar.
+3. Tryck **Tillåt** på allt i listan: aviseringar, batteri obegränsad och exakta larm.
+4. Har telefonen en egen batterispärr (Samsung, Xiaomi, Huawei, OPPO, OnePlus, vivo) visar appen en knapp som öppnar rätt inställning och berättar vad du ska slå på.
+5. Under ⚙ ställer du in tider, steg, bilder eller egna foton, skoldagar, nattläge och ljud.
+
+## Hur säkra är påminnelserna?
+
+- Rutinstart och läggdags går som **väckarklockelarm**, det Android prioriterar högst. En liten larmikon syns i statusraden. Det går att stänga av under "Extra säkra larm".
+- Larmen planeras om när telefonen startar, när appen uppdateras, när tiden ändras och när appen öppnas. Dessutom körs ett **skyddsnät var tredje timme**.
+- Under ⚙ → **Påminnelser just nu** ser du nästa planerade påminnelse och när det senaste larmet kom fram.
+- Ärligt: om någon trycker **Tvinga stopp** på Min dag stänger Android av alla larm tills appen öppnas igen. Det går inte att komma runt.
+
+## Familjeappen
+
+Min dag fungerar bra bredvid Familjeappen. Läs [FAMILJEAPPEN.md](FAMILJEAPPEN.md).
 
 ## Bra att veta
 
-- Allt sparas bara i telefonen. Det finns inget konto och appen behöver inte internet.
-- **Glömd PIN:** gå till **Inställningar → Appar → Min dag → Lagring → Rensa data**. Då återställs allt till standard.
-- Om någon tvångsstoppar appen ("Tvinga stopp") tar Android bort alla påminnelser tills appen öppnas igen.
+Allt sparas bara i telefonen. Det finns inget konto och appen behöver inte internet. Egna foton sparas i appens privata lagring, och appen får ingen åtkomst till resten av bildgalleriet.
